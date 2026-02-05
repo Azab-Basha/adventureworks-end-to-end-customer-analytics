@@ -15,8 +15,8 @@ USAGE GUIDE - 4 PHASES:
 4. Detailed Analysis (Queries 8-12): Deep dive into specific tables
 
 TARGET DATABASE: SQL Server (AdventureWorks 2025)
-AUTHOR: Analytics Team
-DATE: 2025
+AUTHOR: Azab Basha
+DATE: Feb-2026
 */
 
 --------------------------------------------------------------------------------
