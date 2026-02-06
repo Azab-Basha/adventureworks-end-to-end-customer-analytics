@@ -1,5 +1,4 @@
-// Enhanced AdventureWorks ERD for Customer Analytics
-// Fixed structural issues and added missing tables
+// Focused AdventureWorks ERD for customer analytics - Q1-Q7 ONLY
 
 // =============================
 // DIMENSIONS / HUB TABLES
@@ -10,7 +9,7 @@ Table Sales_Customer {
   PersonID int
   StoreID int
   TerritoryID int
-  AccountNumber varchar(10) [not null, note: 'Fixed: varchar not nvarchar']
+  AccountNumber varchar(10) [not null]
   rowguid uniqueidentifier [not null]
   ModifiedDate datetime [not null]
 
@@ -27,8 +26,8 @@ Table Person_Person {
   LastName nvarchar(50) [not null]
   Suffix nvarchar(10)
   EmailPromotion int [not null]
-  AdditionalContactInfo xml [note: 'Fixed: xml not nvarchar(max)']
-  Demographics xml [note: 'Fixed: xml not nvarchar(max)']
+  AdditionalContactInfo xml
+  Demographics xml
   rowguid uniqueidentifier [not null]
   ModifiedDate datetime [not null]
 
@@ -43,23 +42,6 @@ Table Person_EmailAddress {
   ModifiedDate datetime [not null]
 
   Note: 'Customer email/contact details. For targeting and campaign eligibility.'
-}
-
-Table Person_PersonPhone {
-  BusinessEntityID int [not null]
-  PhoneNumber nvarchar(25) [not null]
-  PhoneNumberTypeID int [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Phone contact details. Composite PK: BusinessEntityID + PhoneNumber + PhoneNumberTypeID.'
-}
-
-Table Person_PhoneNumberType {
-  PhoneNumberTypeID int [pk, not null]
-  Name nvarchar(50) [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Phone type lookup: Cell, Home, Work.'
 }
 
 Table Person_Address {
@@ -88,14 +70,6 @@ Table Person_StateProvince {
   Note: 'State/Province dimension. Links addresses to territories.'
 }
 
-Table Person_CountryRegion {
-  CountryRegionCode nvarchar(3) [pk, not null]
-  Name nvarchar(50) [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Top-level geographic dimension.'
-}
-
 Table Sales_SalesTerritory {
   TerritoryID int [pk, not null]
   Name nvarchar(50) [not null]
@@ -111,7 +85,6 @@ Table Sales_SalesTerritory {
   Note: 'Territory/region dimension. For regional CLV, revenue concentration, and segmentation.'
 }
 
-// Bridge between Person/Customer and Address
 Table Person_BusinessEntityAddress {
   BusinessEntityID int [not null]
   AddressID int [not null]
@@ -129,31 +102,6 @@ Table Person_AddressType {
   ModifiedDate datetime [not null]
 
   Note: 'Address type lookup: Billing, Shipping, Home, etc.'
-}
-
-Table Sales_Store {
-  BusinessEntityID int [pk, not null]
-  Name nvarchar(50) [not null]
-  SalesPersonID int
-  Demographics xml
-  rowguid uniqueidentifier [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'B2B store/reseller dimension. Critical for B2B vs B2C segmentation.'
-}
-
-Table Sales_SalesPerson {
-  BusinessEntityID int [pk, not null]
-  TerritoryID int
-  SalesQuota money
-  Bonus money [not null]
-  CommissionPct smallmoney [not null]
-  SalesYTD money [not null]
-  SalesLastYear money [not null]
-  rowguid uniqueidentifier [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Sales rep dimension. For rep performance and customer acquisition channel analysis.'
 }
 
 Table Production_Product {
@@ -249,7 +197,7 @@ Table Sales_SalesOrderDetail {
   SpecialOfferID int [not null]
   UnitPrice money [not null]
   UnitPriceDiscount money [not null]
-  LineTotal numeric(38,6) [not null, note: 'Fixed: numeric not money. Line item revenue for product/category-level monetary']
+  LineTotal numeric(38,6) [not null, note: 'Line item revenue']
   rowguid uniqueidentifier [not null]
   ModifiedDate datetime [not null]
 
@@ -282,7 +230,7 @@ Table Sales_SpecialOfferProduct {
   rowguid uniqueidentifier [not null]
   ModifiedDate datetime [not null]
 
-  Note: 'CRITICAL BRIDGE: Many-to-many between SpecialOffer and Product. Composite PK: SpecialOfferID + ProductID.'
+  Note: 'REQUIRED BRIDGE: Links offers to products. Composite PK: SpecialOfferID + ProductID.'
 }
 
 Table Sales_SalesOrderHeaderSalesReason {
@@ -303,123 +251,35 @@ Table Sales_SalesReason {
 }
 
 // =============================
-// PAYMENT & SHIPPING
+// RELATIONSHIPS - FIXED
 // =============================
 
-Table Sales_CreditCard {
-  CreditCardID int [pk, not null]
-  CardType nvarchar(50) [not null]
-  CardNumber nvarchar(25) [not null, note: 'Masked']
-  ExpMonth tinyint [not null]
-  ExpYear smallint [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Credit card dimension. For payment method analysis.'
-}
-
-Table Sales_PersonCreditCard {
-  BusinessEntityID int [not null]
-  CreditCardID int [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Bridge: Person to CreditCard. Composite PK: BusinessEntityID + CreditCardID.'
-}
-
-Table Purchasing_ShipMethod {
-  ShipMethodID int [pk, not null]
-  Name nvarchar(50) [not null]
-  ShipBase money [not null]
-  ShipRate money [not null]
-  rowguid uniqueidentifier [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Shipping method dimension. For delivery preference and margin analysis.'
-}
-
-// =============================
-// CURRENCY (INTERNATIONAL)
-// =============================
-
-Table Sales_Currency {
-  CurrencyCode nchar(3) [pk, not null]
-  Name nvarchar(50) [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Currency lookup. For international customer analysis.'
-}
-
-Table Sales_CurrencyRate {
-  CurrencyRateID int [pk, not null]
-  CurrencyRateDate datetime [not null]
-  FromCurrencyCode nchar(3) [not null]
-  ToCurrencyCode nchar(3) [not null]
-  AverageRate money [not null]
-  EndOfDayRate money [not null]
-  ModifiedDate datetime [not null]
-
-  Note: 'Daily exchange rates. For multi-currency revenue normalization.'
-}
-
-// =============================
-// RELATIONSHIPS
-// =============================
-
-// Customer ↔ Person / Store / Territory
 Ref: Sales_Customer.PersonID > Person_Person.BusinessEntityID
-Ref: Sales_Customer.StoreID > Sales_Store.BusinessEntityID
 Ref: Sales_Customer.TerritoryID > Sales_SalesTerritory.TerritoryID
 
-// Person ↔ Contact Info
 Ref: Person_EmailAddress.BusinessEntityID > Person_Person.BusinessEntityID
-Ref: Person_PersonPhone.BusinessEntityID > Person_Person.BusinessEntityID
-Ref: Person_PersonPhone.PhoneNumberTypeID > Person_PhoneNumberType.PhoneNumberTypeID
 
-// Person ↔ Address (via bridge)
 Ref: Person_BusinessEntityAddress.BusinessEntityID > Person_Person.BusinessEntityID
 Ref: Person_BusinessEntityAddress.AddressID > Person_Address.AddressID
 Ref: Person_BusinessEntityAddress.AddressTypeID > Person_AddressType.AddressTypeID
-
-// Geographic Hierarchy
 Ref: Person_Address.StateProvinceID > Person_StateProvince.StateProvinceID
-Ref: Person_StateProvince.CountryRegionCode > Person_CountryRegion.CountryRegionCode
 Ref: Person_StateProvince.TerritoryID > Sales_SalesTerritory.TerritoryID
-Ref: Sales_SalesTerritory.CountryRegionCode > Person_CountryRegion.CountryRegionCode
 
-// Store & SalesPerson
-Ref: Sales_Store.SalesPersonID > Sales_SalesPerson.BusinessEntityID
-Ref: Sales_SalesPerson.TerritoryID > Sales_SalesTerritory.TerritoryID
-
-// Orders ↔ Customer / SalesPerson / Territory / Address
 Ref: Sales_SalesOrderHeader.CustomerID > Sales_Customer.CustomerID
-Ref: Sales_SalesOrderHeader.SalesPersonID > Sales_SalesPerson.BusinessEntityID
 Ref: Sales_SalesOrderHeader.TerritoryID > Sales_SalesTerritory.TerritoryID
 Ref: Sales_SalesOrderHeader.BillToAddressID > Person_Address.AddressID
 Ref: Sales_SalesOrderHeader.ShipToAddressID > Person_Address.AddressID
-Ref: Sales_SalesOrderHeader.ShipMethodID > Purchasing_ShipMethod.ShipMethodID
-Ref: Sales_SalesOrderHeader.CreditCardID > Sales_CreditCard.CreditCardID
-Ref: Sales_SalesOrderHeader.CurrencyRateID > Sales_CurrencyRate.CurrencyRateID
 
-// Order Details ↔ Orders ↔ Product (FIXED VIA BRIDGE)
 Ref: Sales_SalesOrderDetail.SalesOrderID > Sales_SalesOrderHeader.SalesOrderID
-Ref: Sales_SalesOrderDetail.ProductID > Sales_SpecialOfferProduct.ProductID
-Ref: Sales_SalesOrderDetail.SpecialOfferID > Sales_SpecialOfferProduct.SpecialOfferID 
 
-// SpecialOfferProduct Bridge ↔ Product & SpecialOffer
+// FIXED: Promotion relationship through bridge
+Ref: Sales_SalesOrderDetail.ProductID > Sales_SpecialOfferProduct.ProductID
+Ref: Sales_SalesOrderDetail.SpecialOfferID > Sales_SpecialOfferProduct.SpecialOfferID
 Ref: Sales_SpecialOfferProduct.ProductID > Production_Product.ProductID
 Ref: Sales_SpecialOfferProduct.SpecialOfferID > Sales_SpecialOffer.SpecialOfferID
 
-// Product Hierarchy
 Ref: Production_Product.ProductSubcategoryID > Production_ProductSubcategory.ProductSubcategoryID
 Ref: Production_ProductSubcategory.ProductCategoryID > Production_ProductCategory.ProductCategoryID
 
-// Sales Reasons (many-to-many)
 Ref: Sales_SalesOrderHeaderSalesReason.SalesOrderID > Sales_SalesOrderHeader.SalesOrderID
 Ref: Sales_SalesOrderHeaderSalesReason.SalesReasonID > Sales_SalesReason.SalesReasonID
-
-// Payment Bridge
-Ref: Sales_PersonCreditCard.BusinessEntityID > Person_Person.BusinessEntityID
-Ref: Sales_PersonCreditCard.CreditCardID > Sales_CreditCard.CreditCardID
-
-// Currency
-Ref: Sales_CurrencyRate.FromCurrencyCode > Sales_Currency.CurrencyCode
-Ref: Sales_CurrencyRate.ToCurrencyCode > Sales_Currency.CurrencyCode
