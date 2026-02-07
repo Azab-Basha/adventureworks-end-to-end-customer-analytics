@@ -12,7 +12,7 @@ USAGE GUIDE - 4 PHASES:
 1. High-Level Discovery (Queries 1-3): Get the lay of the land in 10 minutes
 2. Relationship Discovery (Queries 4-6): Understand how tables connect
 3. Comprehensive Discovery View (Query 7): One-stop dashboard view
-4. Detailed Analysis (Queries 8-12): Deep dive into specific tables
+4. Detailed Analysis (Queries 8-11): Deep dive into specific tables
 
 TARGET DATABASE: SQL Server (AdventureWorks 2025)
 AUTHOR: Azab Basha
@@ -42,7 +42,7 @@ ORDER BY TableCount DESC;
 
 --------------------------------------------------------------------------------
 -- Query #2: ALL Tables with Row Counts and Size
--- Purpose: Show ALL tables with row counts and size
+-- Purpose: Show ALL tables (not limited to top 10) with row counts and size
 -- Use: Enhanced version that includes size in KB for complete database view.
 --      Helps identify large/frequently used tables and understand database scale.
 --------------------------------------------------------------------------------
@@ -53,9 +53,9 @@ SELECT
     SUM(a.total_pages) * 8 AS TotalSizeKB,
     CAST(ROUND(SUM(a.total_pages) * 8.0 / 1024, 2) AS DECIMAL(18,2)) AS TotalSizeMB
 FROM sys.tables AS t
-INNER JOIN sys.partitions AS p 
+JOIN sys.partitions AS p 
     ON t.object_id = p.object_id
-INNER JOIN sys.allocation_units AS a
+JOIN sys.allocation_units AS a
     ON p.partition_id = a.container_id
 WHERE p.index_id IN (0,1)  -- 0: heap, 1: clustered index
 GROUP BY t.schema_id, t.name
@@ -64,7 +64,7 @@ ORDER BY TotalRows DESC, TotalSizeKB DESC;
 --------------------------------------------------------------------------------
 -- Query #3: Customer Analytics-Focused Table Finder
 -- Purpose: Automatically find tables relevant to customer analytics
--- Use: Query that identifies tables with Customer, Order, Sales, Person, 
+-- Use: NEW query that identifies tables with Customer, Order, Sales, Person, 
 --      Product patterns. Perfect for quickly identifying the 10-15 most 
 --      relevant tables for RFM, CLV, cohort, and retention analysis.
 --------------------------------------------------------------------------------
@@ -408,80 +408,77 @@ JOIN sys.types AS ty
 ORDER BY SchemaName, TableName, c.column_id;
 
 --------------------------------------------------------------------------------
--- Query #11: Table and Column Descriptions
--- Purpose: Combined view of table and column descriptions from extended properties
--- Use: Shows user-added descriptions for documentation. Useful for ERD 
---      annotations or BI data dictionary. Uses UNION ALL to combine table-level 
---      and column-level descriptions in one result set.
+-- Query #11: Data Dictionary Extraction for 17 Customer Analytics Tables
+-- Purpose: Extract complete metadata (schema, table, column, data type, PK, FK, descriptions)
+--          for the 17 tables selected for customer analytics
+-- Use: This query generates the source data for the comprehensive data dictionary
+--      document at docs/adventureworks-customer-analytics-data-dictionary.md
+--      Run this query to regenerate or validate the data dictionary content.
+-- Output: Schema, Table, Column, DataType, IsPK, FK references, Column descriptions
 --------------------------------------------------------------------------------
--- Table descriptions
 SELECT
     SCHEMA_NAME(t.schema_id) AS SchemaName,
     t.name AS TableName,
-    NULL AS ColumnName,
-    'Table' AS DescriptionLevel,
-    ep.value AS Description
+    c.name AS ColumnName,
+    TYPE_NAME(c.user_type_id) AS DataType,
+    
+    -- Primary Key indicator
+    CASE WHEN EXISTS (
+        SELECT 1 
+        FROM sys.indexes AS i
+        INNER JOIN sys.index_columns AS ic 
+            ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+        WHERE i.is_primary_key = 1 
+            AND ic.object_id = t.object_id 
+            AND ic.column_id = c.column_id
+    ) THEN 'PK' ELSE '' END AS IsPK,
+    
+    -- Foreign Key information
+    fk.ReferencedSchema AS FK_ReferencesSchema,
+    fk.ReferencedTable AS FK_ReferencesTable,
+    fk.ReferencedColumn AS FK_ReferencesColumn,
+    
+    -- Column description
+    CAST(ep.value AS NVARCHAR(500)) AS ColumnDescription
+
 FROM sys.tables AS t
-LEFT JOIN sys.extended_properties AS ep
-    ON t.object_id = ep.major_id
-    AND ep.minor_id = 0
-    AND ep.name = 'MS_Description'
-WHERE ep.value IS NOT NULL
+INNER JOIN sys.columns AS c
+    ON t.object_id = c.object_id
+    
+-- Get extended property descriptions
+LEFT JOIN sys.extended_properties AS ep 
+    ON ep.major_id = t.object_id
+    AND ep.minor_id = c.column_id
+    AND ep.class = 1
+    
+-- Get foreign key relationships
+LEFT JOIN (
+    SELECT 
+        fkc.parent_object_id,
+        fkc.parent_column_id,
+        SCHEMA_NAME(ref_t.schema_id) AS ReferencedSchema,
+        ref_t.name AS ReferencedTable,
+        ref_c.name AS ReferencedColumn
+    FROM sys.foreign_key_columns AS fkc
+    INNER JOIN sys.tables AS ref_t 
+        ON fkc.referenced_object_id = ref_t.object_id
+    INNER JOIN sys.columns AS ref_c 
+        ON fkc.referenced_object_id = ref_c.object_id 
+        AND fkc.referenced_column_id = ref_c.column_id
+) AS fk 
+    ON fk.parent_object_id = t.object_id 
+    AND fk.parent_column_id = c.column_id
 
-UNION ALL
+WHERE 
+    -- Filter to the 17 customer analytics tables
+    (SCHEMA_NAME(t.schema_id) = 'Sales' AND t.name IN ('Customer', 'SalesOrderHeader', 'SalesOrderDetail', 'SalesTerritory', 'SpecialOffer', 'SpecialOfferProduct', 'SalesOrderHeaderSalesReason', 'SalesReason'))
+    OR (SCHEMA_NAME(t.schema_id) = 'Person' AND t.name IN ('Person', 'EmailAddress', 'Address', 'StateProvince', 'BusinessEntityAddress', 'AddressType'))
+    OR (SCHEMA_NAME(t.schema_id) = 'Production' AND t.name IN ('Product', 'ProductSubcategory', 'ProductCategory'))
 
--- Column descriptions
-SELECT 
-    S.name AS SchemaName,
-    T.name AS TableName,
-    C.name AS ColumnName,
-    'Column' AS DescriptionLevel,
-    EP.value AS Description
-FROM sys.extended_properties EP
-INNER JOIN sys.tables T 
-    ON EP.major_id = T.object_id
-INNER JOIN sys.schemas S 
-    ON T.schema_id = S.schema_id
-INNER JOIN sys.columns C 
-    ON EP.major_id = C.object_id
-    AND EP.minor_id = C.column_id
-WHERE EP.class = 1
-    -- Add filters here, e.g.:
-    -- AND S.name = 'Sales'
-    -- AND T.name LIKE '%Customer%'
-ORDER BY SchemaName, TableName, DescriptionLevel, ColumnName;
-
---------------------------------------------------------------------------------
--- Query #12: Index Details
--- Purpose: List indexes and their columns, including included columns
--- Use: Shows index type, uniqueness, PK/constraint status, and included columns.
---      Useful for performance planning and technical ERD annotations.
---      Add WHERE clause to filter specific schemas or tables.
---------------------------------------------------------------------------------
-SELECT 
-    SCHEMA_NAME(t.schema_id) AS SchemaName,
-    t.name AS TableName,
-    ind.name AS IndexName,
-    col.name AS ColumnName,
-    ind.type_desc AS IndexType,
-    ind.is_unique AS IsUnique,
-    ind.is_primary_key AS IsPrimaryKey,
-    ind.is_unique_constraint AS IsUniqueConstraint,
-    ic.is_included_column AS IsIncludedColumn,
-    ic.key_ordinal AS KeyOrdinal
-FROM sys.indexes AS ind
-INNER JOIN sys.index_columns AS ic
-    ON ind.object_id = ic.object_id
-    AND ind.index_id = ic.index_id
-INNER JOIN sys.columns AS col
-    ON ic.object_id = col.object_id
-    AND ic.column_id = col.column_id
-INNER JOIN sys.tables AS t
-    ON ind.object_id = t.object_id
-    -- Add filters here, e.g.:
-    -- WHERE SCHEMA_NAME(t.schema_id) = 'Sales'
-    -- AND t.name = 'Customer'
-ORDER BY SchemaName, TableName, IndexName, ind.index_id, ic.is_included_column, ic.key_ordinal;
+ORDER BY 
+    SchemaName,
+    TableName,
+    c.column_id;
 
 /*
 ================================================================================
@@ -508,16 +505,21 @@ FOR SHORTLISTING TABLES (5 minutes):
    - Incoming/Outgoing relationships
 
 FOR DETAILED ANALYSIS (as needed):
-9. Run Phase 4 queries (8-12) with WHERE clause filters for your shortlisted tables
-10. Use Query #11 to understand table/column meanings from descriptions
-11. Use Query #12 to understand existing indexes for query optimization
+9. Run Phase 4 queries (8-11) with WHERE clause filters for your shortlisted tables
+10. Run Query #11 (Data Dictionary Extraction) to generate complete metadata 
+    for the 17 customer analytics tables
 
 FOR BUILDING ERD:
-12. Start with hub tables (dimensions) from Query #4
-13. Add spoke tables (facts) that connect to your hubs
-14. Use Query #9 (FK Relationships) to draw connections
-15. Use Query #8 (Primary Keys) to identify unique identifiers
-16. Annotate with descriptions from Query #11
+11. Start with hub tables (dimensions) from Query #4
+12. Add spoke tables (facts) that connect to your hubs
+13. Use Query #9 (FK Relationships) to draw connections
+14. Use Query #8 (Primary Keys) to identify unique identifiers
+15. Use Query #11 output to populate the data dictionary document
+
+FOR GENERATING DATA DICTIONARY:
+16. Run Query #11 to extract metadata for the 17 customer analytics tables
+17. Export results and use to populate/validate the data dictionary at:
+    docs/adventureworks-customer-analytics-data-dictionary.md
 
 ================================================================================
 */
