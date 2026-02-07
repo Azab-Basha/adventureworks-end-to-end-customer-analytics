@@ -70,24 +70,20 @@ Before diving into table selection, we defined **7 core questions** that drive a
 #### Step 1: Run Query #1 - Schema Overview
 **Purpose**: See how tables are organized across schemas.
 
-```sql
+```
 -- Query #1: Schema Overview (lines 33-41 in metadata-exploration-v2.sql)
-SELECT
-    s.name AS SchemaName,
-    COUNT(t.object_id) AS TableCount
-FROM sys.schemas AS s
-LEFT JOIN sys.tables AS t ON t.schema_id = s.schema_id
-GROUP BY s.name
-HAVING COUNT(t.object_id) > 0
-ORDER BY TableCount DESC;
 ```
 
-**Expected Results**:
-- **Sales**: ~17 tables (order, customer, territory tables)
-- **Person**: ~13 tables (customer demographics, addresses, contacts)
-- **Production**: ~26 tables (product catalog, inventory)
-- **Purchasing**: ~8 tables (vendor, purchase orders)
-- **HumanResources**: ~6 tables (employees)
+**Actual Results**:
+
+| SchemaName | TableCount |
+|------------|------------|
+| Production | 25 |
+| Sales | 19 |
+| Person | 13 |
+| HumanResources | 6 |
+| Purchasing | 5 |
+| dbo | 4 |
 
 **Interpretation**: Focus on **Sales**, **Person**, and **Production** schemas for customer analytics.
 
@@ -96,41 +92,51 @@ ORDER BY TableCount DESC;
 #### Step 2: Run Query #3 - Customer Analytics-Focused Table Finder
 **Purpose**: Auto-identify tables relevant to customer analytics using pattern matching.
 
-```sql
--- Query #3: Customer Analytics-Focused Table Finder (lines 71-107)
-SELECT
-    SCHEMA_NAME(t.schema_id) AS SchemaName,
-    t.name AS TableName,
-    SUM(p.rows) AS TotalRows,
-    CAST(ROUND(SUM(a.total_pages) * 8.0 / 1024, 2) AS DECIMAL(18,2)) AS TotalSizeMB,
-    CASE 
-        WHEN t.name LIKE '%Customer%' THEN 'Customer'
-        WHEN t.name LIKE '%Person%' THEN 'Person'
-        WHEN t.name LIKE '%Order%' OR t.name LIKE '%Sales%' THEN 'Transaction'
-        WHEN t.name LIKE '%Product%' THEN 'Product'
-        WHEN t.name LIKE '%Address%' THEN 'Location'
-        ELSE 'Other'
-    END AS AnalyticsCategory
-FROM sys.tables AS t
-JOIN sys.partitions AS p ON t.object_id = p.object_id
-JOIN sys.allocation_units AS a ON p.partition_id = a.container_id
-WHERE p.index_id IN (0,1)
-    AND (t.name LIKE '%Customer%' OR t.name LIKE '%Person%' OR t.name LIKE '%Order%' 
-         OR t.name LIKE '%Sales%' OR t.name LIKE '%Product%' OR t.name LIKE '%Address%')
-GROUP BY t.schema_id, t.name
-ORDER BY AnalyticsCategory, TotalRows DESC;
+```
+-- Query #3: Customer Analytics-Focused Table Finder (lines 71-107 in metadata-exploration-v2.sql)
 ```
 
-**Expected Results** (sample):
+**Actual Results**:
 
-| SchemaName | TableName | TotalRows | AnalyticsCategory |
-|------------|-----------|-----------|-------------------|
-| Sales | Customer | 19,820 | Customer |
-| Person | Person | 19,972 | Person |
-| Sales | SalesOrderDetail | 121,317 | Transaction |
-| Sales | SalesOrderHeader | 31,465 | Transaction |
-| Production | Product | 504 | Product |
-| Person | Address | 19,614 | Location |
+| SchemaName | TableName | TotalRows | TotalSizeMB | AnalyticsCategory | CategoryPriority |
+|------------|-----------|-----------|-------------|-------------------|------------------|
+| Sales | Customer | 19,820 | 1.07 | Customer | 1 |
+| Sales | SalesOrderDetail | 121,317 | 10.10 | Transaction | 2 |
+| Production | WorkOrder | 72,591 | 4.35 | Transaction | 2 |
+| Production | WorkOrderRouting | 67,131 | 5.79 | Transaction | 2 |
+| Sales | SalesOrderHeader | 31,465 | 5.73 | Transaction | 2 |
+| Sales | SalesOrderHeaderSalesReason | 27,647 | 0.76 | Transaction | 2 |
+| Purchasing | PurchaseOrderDetail | 8,845 | 0.57 | Transaction | 2 |
+| Purchasing | PurchaseOrderHeader | 4,012 | 0.45 | Transaction | 2 |
+| Sales | SalesPersonQuotaHistory | 163 | 0.20 | Person | 2 |
+| Sales | SalesTaxRate | 29 | 0.07 | Transaction | 2 |
+| Sales | SalesPerson | 17 | 0.07 | Person | 2 |
+| Sales | SalesTerritoryHistory | 17 | 0.07 | Transaction | 2 |
+| Sales | SalesTerritory | 10 | 0.07 | Transaction | 2 |
+| Sales | SalesReason | 10 | 0.07 | Transaction | 2 |
+| Person | Person | 59,916 | 30.55 | Person | 3 |
+| Person | PersonPhone | 19,972 | 1.26 | Person | 3 |
+| Sales | PersonCreditCard | 19,118 | 0.57 | Person | 3 |
+| Production | ProductInventory | 1,069 | 0.20 | Product | 4 |
+| Production | ProductDescription | 762 | 0.26 | Product | 4 |
+| Production | ProductModelProductDescriptionCulture | 762 | 0.20 | Product | 4 |
+| Sales | SpecialOfferProduct | 538 | 0.20 | Product | 4 |
+| Production | ProductProductPhoto | 504 | 0.07 | Product | 4 |
+| Production | Product | 504 | 0.26 | Product | 4 |
+| Purchasing | ProductVendor | 460 | 0.20 | Product | 4 |
+| Production | ProductCostHistory | 395 | 0.20 | Product | 4 |
+| Production | ProductListPriceHistory | 395 | 0.20 | Product | 4 |
+| Production | ProductModel | 384 | 0.33 | Product | 4 |
+| Production | ProductPhoto | 303 | 2.52 | Product | 4 |
+| Production | ProductSubcategory | 37 | 0.07 | Product | 4 |
+| Production | ProductDocument | 32 | 0.07 | Product | 4 |
+| Production | ProductModelIllustration | 7 | 0.07 | Product | 4 |
+| Production | ProductCategory | 4 | 0.07 | Product | 4 |
+| Production | ProductReview | 4 | 0.20 | Product | 4 |
+| Person | Address | 58,842 | 2.99 | Location | 5 |
+| Person | EmailAddress | 19,972 | 2.07 | Location | 5 |
+| Person | BusinessEntityAddress | 19,614 | 0.95 | Location | 5 |
+| Person | AddressType | 6 | 0.07 | Location | 5 |
 
 **Key Takeaway**: These are your **candidate tables**. Next, you'll validate their relationships and roles.
 
@@ -139,8 +145,8 @@ ORDER BY AnalyticsCategory, TotalRows DESC;
 #### Step 3: Run Query #7 - One Query to Rule Them All
 **Purpose**: Get a comprehensive dashboard view combining size, relationships, date columns, and table roles.
 
-```sql
--- Query #7: Comprehensive Table Discovery (lines 220-310)
+```
+-- Query #7: Comprehensive Table Discovery (lines 220-310 in metadata-exploration-v2.sql)
 -- This query uses CTEs to combine:
 -- - Table sizes
 -- - Foreign key relationships (incoming/outgoing)
@@ -148,14 +154,32 @@ ORDER BY AnalyticsCategory, TotalRows DESC;
 -- - Table descriptions
 ```
 
-**Expected Results** (sample):
+**Actual Results** (showing first 20 rows as sample - full results contain 72 tables):
 
-| TableName | TotalRows | OutgoingFKs | IncomingFKs | TableRole | DateColumnCount | AnalyticsCategory |
-|-----------|-----------|-------------|-------------|-----------|-----------------|-------------------|
-| Customer | 19,820 | 2 | 1 | Hub (Dimension) | 1 | Customer |
-| SalesOrderHeader | 31,465 | 6 | 2 | Spoke (Fact) | 4 | Transaction |
-| Person | 19,972 | 0 | 3 | Hub (Dimension) | 1 | Person |
-| Product | 504 | 2 | 2 | Bridge/Lookup | 4 | Product |
+| SchemaName | TableName | TotalRows | TotalSizeMB | OutgoingFKs | IncomingFKs | TableRole | DateColumnCount | DateColumnList | AnalyticsCategory | TableDescription |
+|------------|-----------|-----------|-------------|-------------|-------------|-----------|-----------------|----------------|-------------------|------------------|
+| Sales | Customer | 19,820 | 1.07 | 3 | 1 | Spoke (Fact) | 1 | ModifiedDate | Customer | Current customer information. Also see the Person and Store tables. |
+| Sales | SalesOrderDetail | 121,317 | 10.10 | 2 | 0 | Spoke (Fact) | 1 | ModifiedDate | Transaction | Individual products associated with a specific sales order. See SalesOrderHeader. |
+| Production | WorkOrder | 72,591 | 4.35 | 2 | 1 | Spoke (Fact) | 4 | StartDate, EndDate, DueDate, ModifiedDate | Transaction | NULL |
+| Production | WorkOrderRouting | 67,131 | 5.79 | 2 | 0 | Spoke (Fact) | 5 | ScheduledStartDate, ScheduledEndDate, ActualStartDate, ActualEndDate, ModifiedDate | Transaction | NULL |
+| Sales | SalesOrderHeader | 31,465 | 5.73 | 8 | 2 | Spoke (Fact) | 4 | OrderDate, DueDate, ShipDate, ModifiedDate | Transaction | General sales order information. |
+| Sales | SalesOrderHeaderSalesReason | 27,647 | 0.76 | 2 | 0 | Spoke (Fact) | 1 | ModifiedDate | Transaction | Cross-reference table mapping sales orders to sales reason codes. |
+| Purchasing | PurchaseOrderDetail | 8,845 | 0.57 | 2 | 0 | Spoke (Fact) | 2 | DueDate, ModifiedDate | Transaction | Individual products associated with a specific purchase order. See PurchaseOrderHeader. |
+| Purchasing | PurchaseOrderHeader | 4,012 | 0.45 | 3 | 1 | Spoke (Fact) | 3 | OrderDate, ShipDate, ModifiedDate | Transaction | General purchase order information. See PurchaseOrderDetail. |
+| Sales | SalesPersonQuotaHistory | 163 | 0.20 | 1 | 0 | Bridge/Lookup | 2 | QuotaDate, ModifiedDate | Person | Sales performance tracking. |
+| Sales | SalesTaxRate | 29 | 0.07 | 1 | 0 | Bridge/Lookup | 1 | ModifiedDate | Transaction | Tax rate lookup table. |
+| Sales | SalesTerritoryHistory | 17 | 0.07 | 2 | 0 | Spoke (Fact) | 3 | StartDate, EndDate, ModifiedDate | Transaction | Sales representative transfers to other sales territories. |
+| Sales | SalesPerson | 17 | 0.07 | 2 | 4 | Hub (Dimension) | 1 | ModifiedDate | Person | Sales representative current information. |
+| Sales | SalesTerritory | 10 | 0.07 | 1 | 5 | Hub (Dimension) | 1 | ModifiedDate | Transaction | Sales territory lookup table. |
+| Sales | SalesReason | 10 | 0.07 | 0 | 1 | Bridge/Lookup | 1 | ModifiedDate | Transaction | Lookup table of customer purchase reasons. |
+| Person | Person | 59,916 | 30.55 | 1 | 7 | Hub (Dimension) | 1 | ModifiedDate | Person | Human beings involved with AdventureWorks: employees, customer contacts, and vendor contacts. |
+| Person | PersonPhone | 19,972 | 1.26 | 2 | 0 | Spoke (Fact) | 1 | ModifiedDate | Person | Telephone number and type of a person. |
+| Sales | PersonCreditCard | 19,118 | 0.57 | 2 | 0 | Spoke (Fact) | 1 | ModifiedDate | Person | Cross-reference table mapping people to their credit card information in the CreditCard table. |
+| Production | ProductInventory | 1,069 | 0.20 | 2 | 0 | Spoke (Fact) | 1 | ModifiedDate | Product | Product inventory information. |
+| Production | ProductDescription | 762 | 0.26 | 0 | 1 | Bridge/Lookup | 1 | ModifiedDate | Product | Product descriptions in several languages. |
+| Production | ProductModelProductDescriptionCulture | 762 | 0.20 | 3 | 0 | Spoke (Fact) | 1 | ModifiedDate | Product | Cross-reference table mapping product descriptions and the language the description is written in. |
+
+*(Full result set includes 72 tables - truncated for brevity)*
 
 **Interpretation**:
 - **Hub (Dimension)**: Tables with many **incoming** FKs → referenced by other tables (e.g., Customer, Person)
@@ -170,18 +194,36 @@ ORDER BY AnalyticsCategory, TotalRows DESC;
 #### Step 4: Run Query #4 - Hub and Spoke Analysis
 **Purpose**: Classify tables by their role in the data model.
 
-```sql
--- Query #4: Table Relationship Summary (lines 121-149)
--- Uses CTE to count incoming and outgoing foreign keys per table
+```
+-- Query #4: Table Relationship Summary with Hub and Spoke Analysis (lines 121-149 in metadata-exploration-v2.sql)
 ```
 
-**Expected Results**:
+**Actual Results** (showing top 20 by total relationships):
 
 | SchemaName | TableName | OutgoingFKs | IncomingFKs | TableRole | TotalRelationships |
 |------------|-----------|-------------|-------------|-----------|-------------------|
-| Sales | Customer | 2 | 1 | Hub (Dimension) | 3 |
-| Sales | SalesOrderHeader | 6 | 2 | Spoke (Fact) | 8 |
-| Person | Person | 0 | 3 | Hub (Dimension) | 3 |
+| Production | Product | 4 | 14 | Hub (Dimension) | 18 |
+| Sales | SalesOrderHeader | 8 | 2 | Spoke (Fact) | 10 |
+| Person | Person | 1 | 7 | Hub (Dimension) | 8 |
+| HumanResources | Employee | 1 | 6 | Hub (Dimension) | 7 |
+| Sales | SalesTerritory | 1 | 5 | Hub (Dimension) | 6 |
+| Sales | SalesPerson | 2 | 4 | Hub (Dimension) | 6 |
+| Person | BusinessEntity | 0 | 5 | Hub (Dimension) | 5 |
+| Production | UnitMeasure | 0 | 4 | Hub (Dimension) | 4 |
+| Person | Address | 1 | 3 | Hub (Dimension) | 4 |
+| Person | StateProvince | 2 | 2 | Bridge/Lookup | 4 |
+| Purchasing | PurchaseOrderHeader | 3 | 1 | Spoke (Fact) | 4 |
+| Sales | Customer | 3 | 1 | Spoke (Fact) | 4 |
+| Sales | Currency | 0 | 3 | Hub (Dimension) | 3 |
+| Person | CountryRegion | 0 | 3 | Hub (Dimension) | 3 |
+| Production | ProductModel | 0 | 3 | Hub (Dimension) | 3 |
+| Purchasing | Vendor | 1 | 2 | Hub (Dimension) | 3 |
+| Production | WorkOrder | 2 | 1 | Spoke (Fact) | 3 |
+| Sales | Store | 2 | 1 | Spoke (Fact) | 3 |
+| Sales | SpecialOfferProduct | 2 | 1 | Spoke (Fact) | 3 |
+| Sales | CurrencyRate | 2 | 1 | Spoke (Fact) | 3 |
+
+*(Full result set includes 60 tables with relationships - truncated for brevity)*
 
 **Key Insight**: Start your ERD with **Hub tables** (dimensions like Customer, Person) and connect them to **Spoke tables** (facts like SalesOrderHeader).
 
@@ -190,27 +232,36 @@ ORDER BY AnalyticsCategory, TotalRows DESC;
 #### Step 5: Run Query #5 - Foreign Key Relationship Map
 **Purpose**: See parent → child relationships to understand data flow.
 
-```sql
--- Query #5: Simplified Foreign Key Relationship Map (lines 158-171)
-SELECT
-    SCHEMA_NAME(r.schema_id) AS ReferencedSchema,
-    r.name AS ReferencedTable,
-    SCHEMA_NAME(p.schema_id) AS ParentSchema,
-    p.name AS ParentTable,
-    fk.name AS ForeignKeyName
-FROM sys.foreign_keys AS fk
-INNER JOIN sys.tables AS p ON p.object_id = fk.parent_object_id
-INNER JOIN sys.tables AS r ON r.object_id = fk.referenced_object_id
-ORDER BY ReferencedTable, ParentTable;
+```
+-- Query #5: Simplified Foreign Key Relationship Map (lines 158-171 in metadata-exploration-v2.sql)
 ```
 
-**Expected Results** (sample):
+**Actual Results** (showing top 20 by FK density):
 
-| ReferencedTable | ParentTable | ForeignKeyName |
-|-----------------|-------------|----------------|
-| Customer | SalesOrderHeader | FK_SalesOrderHeader_Customer |
-| Person | Customer | FK_Customer_Person |
-| Product | SalesOrderDetail | FK_SalesOrderDetail_Product |
+| ReferencedSchema | ReferencedTable | ParentSchema | ParentTable | ForeignKeyName | FKDensityAsReferenced | FKDensityAsParent |
+|------------------|-----------------|--------------|-------------|----------------|---------------------|------------------|
+| Production | Product | Production | BillOfMaterials | FK_BillOfMaterials_Product_ProductAssemblyID | 14 | 3 |
+| Production | Product | Production | BillOfMaterials | FK_BillOfMaterials_Product_ComponentID | 14 | 3 |
+| Production | Product | Production | ProductCostHistory | FK_ProductCostHistory_Product_ProductID | 14 | 1 |
+| Production | Product | Production | ProductDocument | FK_ProductDocument_Product_ProductID | 14 | 2 |
+| Production | Product | Production | ProductInventory | FK_ProductInventory_Product_ProductID | 14 | 2 |
+| Production | Product | Production | ProductListPriceHistory | FK_ProductListPriceHistory_Product_ProductID | 14 | 1 |
+| Production | Product | Production | ProductProductPhoto | FK_ProductProductPhoto_Product_ProductID | 14 | 2 |
+| Production | Product | Production | ProductReview | FK_ProductReview_Product_ProductID | 14 | 1 |
+| Production | Product | Purchasing | ProductVendor | FK_ProductVendor_Product_ProductID | 14 | 3 |
+| Production | Product | Purchasing | PurchaseOrderDetail | FK_PurchaseOrderDetail_Product_ProductID | 14 | 2 |
+| Production | Product | Sales | ShoppingCartItem | FK_ShoppingCartItem_Product_ProductID | 14 | 1 |
+| Production | Product | Sales | SpecialOfferProduct | FK_SpecialOfferProduct_Product_ProductID | 14 | 2 |
+| Production | Product | Production | TransactionHistory | FK_TransactionHistory_Product_ProductID | 14 | 1 |
+| Production | Product | Production | WorkOrder | FK_WorkOrder_Product_ProductID | 14 | 2 |
+| Person | Person | Person | BusinessEntityContact | FK_BusinessEntityContact_Person_PersonID | 7 | 3 |
+| Person | Person | Sales | Customer | FK_Customer_Person_PersonID | 7 | 3 |
+| Person | Person | Person | EmailAddress | FK_EmailAddress_Person_BusinessEntityID | 7 | 1 |
+| Person | Person | HumanResources | Employee | FK_Employee_Person_BusinessEntityID | 7 | 1 |
+| Person | Person | Person | Password | FK_Password_Person_BusinessEntityID | 7 | 1 |
+| Person | Person | Sales | PersonCreditCard | FK_PersonCreditCard_Person_BusinessEntityID | 7 | 2 |
+
+*(Full result set includes 94 foreign key relationships - truncated for brevity)*
 
 **Key Insight**: This tells you:
 - `SalesOrderHeader` references `Customer` → Many orders per customer
@@ -222,19 +273,46 @@ ORDER BY ReferencedTable, ParentTable;
 #### Step 6: Run Query #6 - Date/Time Columns Finder
 **Purpose**: Identify temporal columns for RFM, cohorts, and retention analysis.
 
-```sql
--- Query #6: Date/Time Columns Finder (lines 180-205)
--- Finds all date/datetime/datetime2 columns and categorizes them
+```
+-- Query #6: Date/Time Columns Finder (lines 180-205 in metadata-exploration-v2.sql)
 ```
 
-**Expected Results** (sample):
+**Actual Results** (showing top 30 by row count):
 
-| SchemaName | TableName | ColumnName | DateCategory | TableRowCount |
-|------------|-----------|------------|--------------|---------------|
-| Sales | SalesOrderHeader | OrderDate | Transaction Date | 31,465 |
-| Sales | SalesOrderHeader | ShipDate | Ship Date | 31,465 |
-| Sales | SalesOrderHeader | DueDate | End/Due Date | 31,465 |
-| Person | Person | ModifiedDate | Modified Date | 19,972 |
+| SchemaName | TableName | ColumnName | DataType | TableRowCount | DateCategory |
+|------------|-----------|------------|----------|---------------|--------------|
+| Sales | SalesOrderDetail | ModifiedDate | datetime | 121,317 | Modified Date |
+| Production | TransactionHistory | ModifiedDate | datetime | 113,443 | Modified Date |
+| Production | TransactionHistory | TransactionDate | datetime | 113,443 | Other Date |
+| Production | TransactionHistoryArchive | ModifiedDate | datetime | 89,253 | Modified Date |
+| Production | TransactionHistoryArchive | TransactionDate | datetime | 89,253 | Other Date |
+| Production | WorkOrder | DueDate | datetime | 72,591 | End/Due Date |
+| Production | WorkOrder | EndDate | datetime | 72,591 | End/Due Date |
+| Production | WorkOrder | ModifiedDate | datetime | 72,591 | Modified Date |
+| Production | WorkOrder | StartDate | datetime | 72,591 | Created Date |
+| Production | WorkOrderRouting | ActualEndDate | datetime | 67,131 | End/Due Date |
+| Production | WorkOrderRouting | ActualStartDate | datetime | 67,131 | Created Date |
+| Production | WorkOrderRouting | ModifiedDate | datetime | 67,131 | Modified Date |
+| Production | WorkOrderRouting | ScheduledEndDate | datetime | 67,131 | End/Due Date |
+| Production | WorkOrderRouting | ScheduledStartDate | datetime | 67,131 | Created Date |
+| Sales | SalesOrderHeader | DueDate | datetime | 31,465 | End/Due Date |
+| Sales | SalesOrderHeader | ModifiedDate | datetime | 31,465 | Modified Date |
+| Sales | SalesOrderHeader | OrderDate | datetime | 31,465 | Transaction Date |
+| Sales | SalesOrderHeader | ShipDate | datetime | 31,465 | Ship Date |
+| Sales | SalesOrderHeaderSalesReason | ModifiedDate | datetime | 27,647 | Modified Date |
+| Person | BusinessEntity | ModifiedDate | datetime | 20,777 | Modified Date |
+| Person | EmailAddress | ModifiedDate | datetime | 19,972 | Modified Date |
+| Person | Password | ModifiedDate | datetime | 19,972 | Modified Date |
+| Person | Person | ModifiedDate | datetime | 19,972 | Modified Date |
+| Person | PersonPhone | ModifiedDate | datetime | 19,972 | Modified Date |
+| Sales | Customer | ModifiedDate | datetime | 19,820 | Modified Date |
+| Person | Address | ModifiedDate | datetime | 19,614 | Modified Date |
+| Person | BusinessEntityAddress | ModifiedDate | datetime | 19,614 | Modified Date |
+| Sales | CreditCard | ModifiedDate | datetime | 19,118 | Modified Date |
+| Sales | PersonCreditCard | ModifiedDate | datetime | 19,118 | Modified Date |
+| Sales | CurrencyRate | CurrencyRateDate | datetime | 13,532 | Other Date |
+
+*(Full result set includes 128 date/time columns - truncated for brevity)*
 
 **Critical Finding**: `SalesOrderHeader.OrderDate` is the **primary temporal anchor** for:
 - **Recency** (time since last order)
