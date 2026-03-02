@@ -2,322 +2,369 @@
 ===============================================================================
 DDL Script: Create Bronze Tables for AdventureWorks2025_CustomerDW
 Naming Convention: bronze.aw_<schema>_<table>
-
-AUTHOR: Azab Basha
-DATE: Feb-2026
+Bronze raw load: Fully nullable, no PK, no constraint
+Author: Azab Basha
+Date: Feb-2026
 ===============================================================================
 */
 
-USE AdventureWorks2025_CustomerDW
+-- 1. Sales.Customer
+IF OBJECT_ID('bronze.aw_sales_customer', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_customer (
+        customerid int,
+        personid int,
+        storeid int,
+        territoryid int,
+        accountnumber varchar(10),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+        
+    );
+    PRINT 'Created table bronze.aw_sales_customer.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_customer already exists. Skipping creation.';
 GO
 
--- 1. Sales.Customer
-IF OBJECT_ID('bronze.aw_sales_customer', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_customer;
-CREATE TABLE bronze.aw_sales_customer (
-    customer_id int NOT NULL PRIMARY KEY,
-    person_id int,
-    store_id int,
-    territory_id int,
-    accountnumber varchar(10) NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
-
 -- 2. Person.Person
-IF OBJECT_ID('bronze.aw_person_person', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_person_person;
-CREATE TABLE bronze.aw_person_person (
-    business_entity_id int NOT NULL PRIMARY KEY,
-    persontype nchar(2) NOT NULL,
-    namestyle bit NOT NULL,
-    title nvarchar(8),
-    firstname nvarchar(50) NOT NULL,
-    middlename nvarchar(50),
-    lastname nvarchar(50) NOT NULL,
-    suffix nvarchar(10),
-    emailpromotion int NOT NULL,
-    additionalcontactinfo xml,
-    demographics xml,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_person_person', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_person_person (
+        businessentityid int,
+        persontype nchar(2),
+        namestyle bit,
+        title nvarchar(8),
+        firstname nvarchar(50),
+        middlename nvarchar(50),
+        lastname nvarchar(50),
+        suffix nvarchar(10),
+        emailpromotion int,
+        additionalcontactinfo xml,
+        demographics xml,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+        
+    );
+    PRINT 'Created table bronze.aw_person_person.';
+END
+ELSE
+    PRINT 'Table bronze.aw_person_person already exists. Skipping creation.';
+GO
 
 -- 3. Person.EmailAddress
-IF OBJECT_ID('bronze.aw_person_emailaddress', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_person_emailaddress;
-CREATE TABLE bronze.aw_person_emailaddress (
-    business_entity_id int NOT NULL,
-    emailaddress_id int NOT NULL,
-    emailaddress nvarchar(50),
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL,
-    PRIMARY KEY (business_entity_id, emailaddress_id)
-);
+IF OBJECT_ID('bronze.aw_person_emailaddress', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_person_emailaddress (
+        business_entity_id int,
+        emailaddress_id int,
+        emailaddress nvarchar(50),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_person_emailaddress.';
+END
+ELSE
+    PRINT 'Table bronze.aw_person_emailaddress already exists. Skipping creation.';
+GO
 
 -- 4. Person.Address
-IF OBJECT_ID('bronze.aw_person_address', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_person_address;
-CREATE TABLE bronze.aw_person_address (
-    address_id int NOT NULL PRIMARY KEY,
-    addressline1 nvarchar(60) NOT NULL,
-    addressline2 nvarchar(60),
-    city nvarchar(30) NOT NULL,
-    stateprovince_id int NOT NULL,
-    postalcode nvarchar(15) NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_person_address', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_person_address (
+        address_id int,
+        addressline1 nvarchar(60),
+        addressline2 nvarchar(60),
+        city nvarchar(30),
+        stateprovince_id int,
+        postalcode nvarchar(15),
+        spatiallocation geography,  
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_person_address.';
+END
+ELSE
+    PRINT 'Table bronze.aw_person_address already exists. Skipping creation.';
+GO
 
 -- 5. Person.StateProvince
-IF OBJECT_ID('bronze.aw_person_stateprovince', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_person_stateprovince;
-CREATE TABLE bronze.aw_person_stateprovince (
-    stateprovince_id int NOT NULL PRIMARY KEY,
-    stateprovincecode nchar(3) NOT NULL,
-    countryregioncode nvarchar(3) NOT NULL,
-    isonlystateprovinceflag bit NOT NULL,
-    name nvarchar(50) NOT NULL,
-    territory_id int NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_person_stateprovince', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_person_stateprovince (
+        stateprovince_id int,
+        stateprovincecode nchar(3),
+        countryregioncode nvarchar(3),
+        isonlystateprovinceflag bit,
+        name nvarchar(50),
+        territory_id int,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_person_stateprovince.';
+END
+ELSE
+    PRINT 'Table bronze.aw_person_stateprovince already exists. Skipping creation.';
+GO
 
 -- 6. Sales.SalesTerritory
-IF OBJECT_ID('bronze.aw_sales_salesterritory', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_salesterritory;
-CREATE TABLE bronze.aw_sales_salesterritory (
-    territory_id int NOT NULL PRIMARY KEY,
-    name nvarchar(50) NOT NULL,
-    countryregioncode nvarchar(3) NOT NULL,
-    group_name nvarchar(50) NOT NULL,
-    salesytd money NOT NULL,
-    saleslastyear money NOT NULL,
-    costytd money NOT NULL,
-    costlastyear money NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_sales_salesterritory', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_salesterritory (
+        territory_id int,
+        name nvarchar(50),
+        countryregioncode nvarchar(3),
+        group_name nvarchar(50),
+        salesytd money,
+        saleslastyear money,
+        costytd money,
+        costlastyear money,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_salesterritory.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_salesterritory already exists. Skipping creation.';
+GO
 
 -- 7. Person.BusinessEntityAddress
-IF OBJECT_ID('bronze.aw_person_businessentityaddress', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_person_businessentityaddress;
-CREATE TABLE bronze.aw_person_businessentityaddress (
-    business_entity_id int NOT NULL,
-    address_id int NOT NULL,
-    addresstype_id int NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL,
-    PRIMARY KEY (business_entity_id, address_id, addresstype_id)
-);
+IF OBJECT_ID('bronze.aw_person_businessentityaddress', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_person_businessentityaddress (
+        business_entity_id int,
+        address_id int,
+        addresstype_id int,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_person_businessentityaddress.';
+END
+ELSE
+    PRINT 'Table bronze.aw_person_businessentityaddress already exists. Skipping creation.';
+GO
 
 -- 8. Person.AddressType
-IF OBJECT_ID('bronze.aw_person_addresstype', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_person_addresstype;
-CREATE TABLE bronze.aw_person_addresstype (
-    addresstype_id int NOT NULL PRIMARY KEY,
-    name nvarchar(50) NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_person_addresstype', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_person_addresstype (
+        addresstype_id int,
+        name nvarchar(50),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_person_addresstype.';
+END
+ELSE
+    PRINT 'Table bronze.aw_person_addresstype already exists. Skipping creation.';
+GO
 
 -- 9. Production.Product
-IF OBJECT_ID('bronze.aw_production_product', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_production_product;
-CREATE TABLE bronze.aw_production_product (
-    product_id int NOT NULL PRIMARY KEY,
-    name nvarchar(50) NOT NULL,
-    productnumber nvarchar(25) NOT NULL,
-    makeflag bit NOT NULL,
-    finishedgoodsflag bit NOT NULL,
-    color nvarchar(15),
-    safetystocklevel smallint NOT NULL,
-    reorderpoint smallint NOT NULL,
-    standardcost money NOT NULL,
-    listprice money NOT NULL,
-    size nvarchar(5),
-    sizeunitmeasurecode nchar(3),
-    weightunitmeasurecode nchar(3),
-    weight decimal(8,2),
-    daystomanufacture int NOT NULL,
-    productline nchar(2),
-    class nchar(2),
-    style nchar(2),
-    productsubcategory_id int,
-    productmodel_id int,
-    sellstartdate datetime NOT NULL,
-    sellenddate datetime,
-    discontinueddate datetime,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_production_product', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_production_product (
+        product_id int,
+        name nvarchar(50),
+        productnumber nvarchar(25),
+        makeflag bit,
+        finishedgoodsflag bit,
+        color nvarchar(15),
+        safetystocklevel smallint,
+        reorderpoint smallint,
+        standardcost money,
+        listprice money,
+        size nvarchar(5),
+        sizeunitmeasurecode nchar(3),
+        weightunitmeasurecode nchar(3),
+        weight decimal(8,2),
+        daystomanufacture int,
+        productline nchar(2),
+        class nchar(2),
+        style nchar(2),
+        productsubcategory_id int,
+        productmodel_id int,
+        sellstartdate datetime,
+        sellenddate datetime,
+        discontinueddate datetime,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_production_product.';
+END
+ELSE
+    PRINT 'Table bronze.aw_production_product already exists. Skipping creation.';
+GO
 
 -- 10. Production.ProductSubcategory
-IF OBJECT_ID('bronze.aw_production_productsubcategory', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_production_productsubcategory;
-CREATE TABLE bronze.aw_production_productsubcategory (
-    productsubcategory_id int NOT NULL PRIMARY KEY,
-    productcategory_id int NOT NULL,
-    name nvarchar(50) NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_production_productsubcategory', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_production_productsubcategory (
+        productsubcategory_id int,
+        productcategory_id int,
+        name nvarchar(50),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_production_productsubcategory.';
+END
+ELSE
+    PRINT 'Table bronze.aw_production_productsubcategory already exists. Skipping creation.';
+GO
 
 -- 11. Production.ProductCategory
-IF OBJECT_ID('bronze.aw_production_productcategory', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_production_productcategory;
-CREATE TABLE bronze.aw_production_productcategory (
-    productcategory_id int NOT NULL PRIMARY KEY,
-    name nvarchar(50) NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_production_productcategory', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_production_productcategory (
+        productcategory_id int,
+        name nvarchar(50),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_production_productcategory.';
+END
+ELSE
+    PRINT 'Table bronze.aw_production_productcategory already exists. Skipping creation.';
+GO
 
 -- 12. Sales.SalesOrderHeader
-IF OBJECT_ID('bronze.aw_sales_salesorderheader', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_salesorderheader;
-CREATE TABLE bronze.aw_sales_salesorderheader (
-    salesorder_id int NOT NULL PRIMARY KEY,
-    revisionnumber tinyint NOT NULL,
-    orderdate datetime NOT NULL,
-    duedate datetime NOT NULL,
-    shipdate datetime,
-    status tinyint NOT NULL,
-    onlineorderflag bit NOT NULL,
-    salesordernumber nvarchar(25) NOT NULL,
-    purchaseordernumber nvarchar(25),
-    accountnumber nvarchar(15),
-    customer_id int NOT NULL,
-    salesperson_id int,
-    territory_id int,
-    billtoaddress_id int NOT NULL,
-    shiptoaddress_id int NOT NULL,
-    shipmethod_id int NOT NULL,
-    creditcard_id int,
-    creditcardapprovalcode varchar(15),
-    currencyrate_id int,
-    subtotal money NOT NULL,
-    taxamt money NOT NULL,
-    freight money NOT NULL,
-    totaldue money NOT NULL,
-    comment nvarchar(128),
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_sales_salesorderheader', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_salesorderheader (
+        salesorder_id int,
+        revisionnumber tinyint,
+        orderdate datetime,
+        duedate datetime,
+        shipdate datetime,
+        status tinyint,
+        onlineorderflag bit,
+        salesordernumber nvarchar(25),
+        purchaseordernumber nvarchar(25),
+        accountnumber nvarchar(15),
+        customer_id int,
+        salesperson_id int,
+        territory_id int,
+        billtoaddress_id int,
+        shiptoaddress_id int,
+        shipmethod_id int,
+        creditcard_id int,
+        creditcardapprovalcode varchar(15),
+        currencyrate_id int,
+        subtotal money,
+        taxamt money,
+        freight money,
+        totaldue money,
+        comment nvarchar(128),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_salesorderheader.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_salesorderheader already exists. Skipping creation.';
+GO
 
 -- 13. Sales.SalesOrderDetail
-IF OBJECT_ID('bronze.aw_sales_salesorderdetail', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_salesorderdetail;
-CREATE TABLE bronze.aw_sales_salesorderdetail (
-    salesorder_id int NOT NULL,
-    salesorderdetail_id int NOT NULL,
-    carriertrackingnumber nvarchar(25),
-    orderqty smallint NOT NULL,
-    product_id int NOT NULL,
-    specialoffer_id int NOT NULL,
-    unitprice money NOT NULL,
-    unitpricediscount money NOT NULL,
-    linetotal numeric(38,6) NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL,
-    PRIMARY KEY (salesorder_id, salesorderdetail_id)
-);
+IF OBJECT_ID('bronze.aw_sales_salesorderdetail', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_salesorderdetail (
+        salesorder_id int,
+        salesorderdetail_id int,
+        carriertrackingnumber nvarchar(25),
+        orderqty smallint,
+        product_id int,
+        specialoffer_id int,
+        unitprice money,
+        unitpricediscount money,
+        linetotal numeric(38,6),
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_salesorderdetail.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_salesorderdetail already exists. Skipping creation.';
+GO
 
 -- 14. Sales.SpecialOffer
-IF OBJECT_ID('bronze.aw_sales_specialoffer', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_specialoffer;
-CREATE TABLE bronze.aw_sales_specialoffer (
-    specialoffer_id int NOT NULL PRIMARY KEY,
-    description nvarchar(255) NOT NULL,
-    discountpct smallmoney NOT NULL,
-    type nvarchar(50) NOT NULL,
-    category nvarchar(50) NOT NULL,
-    startdate datetime NOT NULL,
-    enddate datetime NOT NULL,
-    minqty int NOT NULL,
-    maxqty int,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_sales_specialoffer', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_specialoffer (
+        specialoffer_id int,
+        description nvarchar(255),
+        discountpct smallmoney,
+        type nvarchar(50),
+        category nvarchar(50),
+        startdate datetime,
+        enddate datetime,
+        minqty int,
+        maxqty int,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_specialoffer.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_specialoffer already exists. Skipping creation.';
+GO
 
 -- 15. Sales.SpecialOfferProduct
-IF OBJECT_ID('bronze.aw_sales_specialofferproduct', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_specialofferproduct;
-CREATE TABLE bronze.aw_sales_specialofferproduct (
-    specialoffer_id int NOT NULL,
-    product_id int NOT NULL,
-    rowguid uniqueidentifier NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL,
-    PRIMARY KEY (specialoffer_id, product_id)
-);
+IF OBJECT_ID('bronze.aw_sales_specialofferproduct', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_specialofferproduct (
+        specialoffer_id int,
+        product_id int,
+        rowguid uniqueidentifier,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_specialofferproduct.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_specialofferproduct already exists. Skipping creation.';
+GO
 
 -- 16. Sales.SalesOrderHeaderSalesReason
-IF OBJECT_ID('bronze.aw_sales_salesorderheadersalesreason', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_salesorderheadersalesreason;
-CREATE TABLE bronze.aw_sales_salesorderheadersalesreason (
-    salesorder_id int NOT NULL,
-    salesreason_id int NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL,
-    PRIMARY KEY (salesorder_id, salesreason_id)
-);
+IF OBJECT_ID('bronze.aw_sales_salesorderheadersalesreason', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_salesorderheadersalesreason (
+        salesorder_id int,
+        salesreason_id int,
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_salesorderheadersalesreason.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_salesorderheadersalesreason already exists. Skipping creation.';
+GO
 
 -- 17. Sales.SalesReason
-IF OBJECT_ID('bronze.aw_sales_salesreason', 'U') IS NOT NULL
-    DROP TABLE bronze.aw_sales_salesreason;
-CREATE TABLE bronze.aw_sales_salesreason (
-    salesreason_id int NOT NULL PRIMARY KEY,
-    name nvarchar(50) NOT NULL,
-    reasontype nvarchar(50) NOT NULL,
-    modifieddate datetime NOT NULL,
-    -- Auditing columns
-    dwh_load_date datetime NOT NULL,
-    dwh_batch_id varchar(100) NOT NULL
-);
+IF OBJECT_ID('bronze.aw_sales_salesreason', 'U') IS NULL
+BEGIN
+    CREATE TABLE bronze.aw_sales_salesreason (
+        salesreason_id int,
+        name nvarchar(50),
+        reasontype nvarchar(50),
+        modifieddate datetime,
+        dwh_load_date datetime,
+    );
+    PRINT 'Created table bronze.aw_sales_salesreason.';
+END
+ELSE
+    PRINT 'Table bronze.aw_sales_salesreason already exists. Skipping creation.';
+GO
+
