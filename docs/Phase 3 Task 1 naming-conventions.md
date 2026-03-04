@@ -223,8 +223,3 @@ Because SSIS is your primary ETL tool, standardize package and project names so 
 
 ---
 
-If you’d like, I can:
-- Generate a small starter folder skeleton (README + example DDLs) for `sql/` and `etl/` that follow these conventions, or  
-- Provide a short set of `CREATE TABLE` DDL files (bronze + control tables) using these names so you can copy/paste into SQL Server.
-
-Which would you prefer next?
