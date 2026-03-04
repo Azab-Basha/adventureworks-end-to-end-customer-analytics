@@ -5,7 +5,6 @@ Naming Convention: bronze.aw_<schema>_<table>
 Bronze raw load: Fully nullable, no PK, no constraint
 Author: Azab Basha
 Date: Feb-2026
-Modified: No underscores in column names (for SSIS mapping)
 ===============================================================================
 */
 
@@ -13,14 +12,14 @@ Modified: No underscores in column names (for SSIS mapping)
 IF OBJECT_ID('bronze.aw_sales_customer', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_customer (
-        customerid int,
-        personid int,
-        storeid int,
-        territoryid int,
+        customer_id int,
+        person_id int,
+        store_id int,
+        territory_id int,
         accountnumber varchar(10),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
         
     );
     PRINT 'Created table bronze.aw_sales_customer.';
@@ -33,7 +32,7 @@ GO
 IF OBJECT_ID('bronze.aw_person_person', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_person_person (
-        businessentityid int,
+        businessentity_id int,
         persontype nchar(2),
         namestyle bit,
         title nvarchar(8),
@@ -46,7 +45,7 @@ BEGIN
         demographics xml,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
         
     );
     PRINT 'Created table bronze.aw_person_person.';
@@ -59,12 +58,12 @@ GO
 IF OBJECT_ID('bronze.aw_person_emailaddress', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_person_emailaddress (
-        businessentityid int,
-        emailaddressid int,
+        business_entity_id int,
+        emailaddress_id int,
         emailaddress nvarchar(50),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_person_emailaddress.';
 END
@@ -76,16 +75,16 @@ GO
 IF OBJECT_ID('bronze.aw_person_address', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_person_address (
-        addressid int,
+        address_id int,
         addressline1 nvarchar(60),
         addressline2 nvarchar(60),
         city nvarchar(30),
-        stateprovinceid int,
+        stateprovince_id int,
         postalcode nvarchar(15),
         spatiallocation geography,  
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_person_address.';
 END
@@ -97,15 +96,15 @@ GO
 IF OBJECT_ID('bronze.aw_person_stateprovince', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_person_stateprovince (
-        stateprovinceid int,
+        stateprovince_id int,
         stateprovincecode nchar(3),
         countryregioncode nvarchar(3),
         isonlystateprovinceflag bit,
         name nvarchar(50),
-        territoryid int,
+        territory_id int,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_person_stateprovince.';
 END
@@ -117,17 +116,17 @@ GO
 IF OBJECT_ID('bronze.aw_sales_salesterritory', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_salesterritory (
-        territoryid int,
+        territory_id int,
         name nvarchar(50),
         countryregioncode nvarchar(3),
-        groupname nvarchar(50),
+        group_name nvarchar(50),
         salesytd money,
         saleslastyear money,
         costytd money,
         costlastyear money,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_salesterritory.';
 END
@@ -139,12 +138,12 @@ GO
 IF OBJECT_ID('bronze.aw_person_businessentityaddress', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_person_businessentityaddress (
-        businessentityid int,
-        addressid int,
-        addresstypeid int,
+        business_entity_id int,
+        address_id int,
+        addresstype_id int,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_person_businessentityaddress.';
 END
@@ -156,11 +155,11 @@ GO
 IF OBJECT_ID('bronze.aw_person_addresstype', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_person_addresstype (
-        addresstypeid int,
+        addresstype_id int,
         name nvarchar(50),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_person_addresstype.';
 END
@@ -172,7 +171,7 @@ GO
 IF OBJECT_ID('bronze.aw_production_product', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_production_product (
-        productid int,
+        product_id int,
         name nvarchar(50),
         productnumber nvarchar(25),
         makeflag bit,
@@ -190,14 +189,14 @@ BEGIN
         productline nchar(2),
         class nchar(2),
         style nchar(2),
-        productsubcategoryid int,
-        productmodelid int,
+        productsubcategory_id int,
+        productmodel_id int,
         sellstartdate datetime,
         sellenddate datetime,
         discontinueddate datetime,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_production_product.';
 END
@@ -209,12 +208,12 @@ GO
 IF OBJECT_ID('bronze.aw_production_productsubcategory', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_production_productsubcategory (
-        productsubcategoryid int,
-        productcategoryid int,
+        productsubcategory_id int,
+        productcategory_id int,
         name nvarchar(50),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_production_productsubcategory.';
 END
@@ -226,11 +225,11 @@ GO
 IF OBJECT_ID('bronze.aw_production_productcategory', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_production_productcategory (
-        productcategoryid int,
+        productcategory_id int,
         name nvarchar(50),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_production_productcategory.';
 END
@@ -242,7 +241,7 @@ GO
 IF OBJECT_ID('bronze.aw_sales_salesorderheader', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_salesorderheader (
-        salesorderid int,
+        salesorder_id int,
         revisionnumber tinyint,
         orderdate datetime,
         duedate datetime,
@@ -252,15 +251,15 @@ BEGIN
         salesordernumber nvarchar(25),
         purchaseordernumber nvarchar(25),
         accountnumber nvarchar(15),
-        customerid int,
-        salespersonid int,
-        territoryid int,
-        billtoaddressid int,
-        shiptoaddressid int,
-        shipmethodid int,
-        creditcardid int,
+        customer_id int,
+        salesperson_id int,
+        territory_id int,
+        billtoaddress_id int,
+        shiptoaddress_id int,
+        shipmethod_id int,
+        creditcard_id int,
         creditcardapprovalcode varchar(15),
-        currencyrateid int,
+        currencyrate_id int,
         subtotal money,
         taxamt money,
         freight money,
@@ -268,7 +267,7 @@ BEGIN
         comment nvarchar(128),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_salesorderheader.';
 END
@@ -280,18 +279,18 @@ GO
 IF OBJECT_ID('bronze.aw_sales_salesorderdetail', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_salesorderdetail (
-        salesorderid int,
-        salesorderdetailid int,
+        salesorder_id int,
+        salesorderdetail_id int,
         carriertrackingnumber nvarchar(25),
         orderqty smallint,
-        productid int,
-        specialofferid int,
+        product_id int,
+        specialoffer_id int,
         unitprice money,
         unitpricediscount money,
         linetotal numeric(38,6),
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_salesorderdetail.';
 END
@@ -303,7 +302,7 @@ GO
 IF OBJECT_ID('bronze.aw_sales_specialoffer', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_specialoffer (
-        specialofferid int,
+        specialoffer_id int,
         description nvarchar(255),
         discountpct smallmoney,
         type nvarchar(50),
@@ -314,7 +313,7 @@ BEGIN
         maxqty int,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_specialoffer.';
 END
@@ -326,11 +325,11 @@ GO
 IF OBJECT_ID('bronze.aw_sales_specialofferproduct', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_specialofferproduct (
-        specialofferid int,
-        productid int,
+        specialoffer_id int,
+        product_id int,
         rowguid uniqueidentifier,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_specialofferproduct.';
 END
@@ -342,10 +341,10 @@ GO
 IF OBJECT_ID('bronze.aw_sales_salesorderheadersalesreason', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_salesorderheadersalesreason (
-        salesorderid int,
-        salesreasonid int,
+        salesorder_id int,
+        salesreason_id int,
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_salesorderheadersalesreason.';
 END
@@ -357,11 +356,11 @@ GO
 IF OBJECT_ID('bronze.aw_sales_salesreason', 'U') IS NULL
 BEGIN
     CREATE TABLE bronze.aw_sales_salesreason (
-        salesreasonid int,
+        salesreason_id int,
         name nvarchar(50),
         reasontype nvarchar(50),
         modifieddate datetime,
-        dwhloaddate datetime
+        dwh_load_date datetime,
     );
     PRINT 'Created table bronze.aw_sales_salesreason.';
 END
